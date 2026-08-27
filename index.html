@@ -141,6 +141,15 @@
         height: 72px;
         font-size: 13px;
       }
+
+      .btn {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
+
+      canvas {
+        box-shadow: none;
+      }
     }
   </style>
 </head>
@@ -231,13 +240,15 @@
 
     const W = 720;
     const H = 1280;
+    const USER_AGENT = navigator.userAgent || "";
+    const IS_IOS = /iPad|iPhone|iPod/.test(USER_AGENT) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     const IS_MOBILE_DISPLAY = window.matchMedia("(pointer: coarse), (max-width: 720px)").matches;
-    const RENDER_SCALE = IS_MOBILE_DISPLAY ? 0.72 : 1;
-    const EFFECT_QUALITY = IS_MOBILE_DISPLAY ? 0.38 : 1;
-    const TRAIL_QUALITY = IS_MOBILE_DISPLAY ? 0.24 : 1;
-    const MAX_PARTICLES = IS_MOBILE_DISPLAY ? 110 : 430;
-    const MAX_SHOCKWAVES = IS_MOBILE_DISPLAY ? 12 : 42;
-    const MAX_SLASHES = IS_MOBILE_DISPLAY ? 9 : 34;
+    const RENDER_SCALE = IS_IOS ? 0.58 : (IS_MOBILE_DISPLAY ? 0.72 : 1);
+    const EFFECT_QUALITY = IS_IOS ? 0.25 : (IS_MOBILE_DISPLAY ? 0.38 : 1);
+    const TRAIL_QUALITY = IS_IOS ? 0.12 : (IS_MOBILE_DISPLAY ? 0.24 : 1);
+    const MAX_PARTICLES = IS_IOS ? 70 : (IS_MOBILE_DISPLAY ? 110 : 430);
+    const MAX_SHOCKWAVES = IS_IOS ? 8 : (IS_MOBILE_DISPLAY ? 12 : 42);
+    const MAX_SLASHES = IS_IOS ? 6 : (IS_MOBILE_DISPLAY ? 9 : 34);
 
     if (RENDER_SCALE < 1) {
       canvas.width = Math.round(W * RENDER_SCALE);
@@ -817,7 +828,7 @@
     function cueLoopSoundRestart(key) {
       pendingLoopStart[key] = "restart";
       const audio = LOOP_SOUNDS[key];
-      if (audio) {
+      if (audio && audio.paused) {
         try {
           audio.currentTime = 0;
         } catch (err) {}
@@ -831,19 +842,13 @@
     }
 
     function quietShortSounds(lockMs = 320) {
-      for (const key in SOUNDS) {
-        try {
-          SOUNDS[key].pause();
-          SOUNDS[key].currentTime = 0;
-        } catch (err) {}
-      }
       activeSoundPriority = 6;
       activeSoundLockUntil = performance.now() + lockMs;
     }
 
     function syncLoopSounds(game, dt) {
       if (!soundEnabled || game.state !== "playing") {
-        stopLoopSound("attack");
+        stopLoopSound("attack", true, true);
         const keepBgmPosition = soundEnabled && (game.state === "branch" || game.state === "complete");
         stopLoopSound("bgm", !keepBgmPosition, true);
         stopLoopSound("finalBgm", !keepBgmPosition, true);
@@ -910,7 +915,7 @@
         const now = audioCtx.currentTime;
         const master = audioCtx.createGain();
         master.gain.setValueAtTime(0.0001, now);
-        const fallbackPeak = type === "clear" || type === "power" ? 0.045 : 0.08;
+        const fallbackPeak = type === "clear" || type === "power" || type === "start" ? 0.04 : 0.08;
         master.gain.exponentialRampToValueAtTime(fallbackPeak, now + 0.012);
         master.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
         master.connect(audioCtx.destination);
@@ -931,7 +936,7 @@
           osc.type = type === "hit" ? "sawtooth" : "triangle";
           osc.frequency.setValueAtTime(freq, t);
           gain.gain.setValueAtTime(0.0001, t);
-          const notePeak = type === "hit" ? 0.09 : (type === "clear" || type === "power" ? 0.038 : 0.06);
+          const notePeak = type === "hit" ? 0.09 : (type === "clear" || type === "power" || type === "start" ? 0.034 : 0.06);
           gain.gain.exponentialRampToValueAtTime(notePeak, t + 0.01);
           gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
           osc.connect(gain);
@@ -1403,7 +1408,7 @@
       clearStage() {
         this.bestScore = Math.max(this.bestScore, this.score);
         localStorage.setItem("branchQuestBest", String(this.bestScore));
-        stopLoopSound("attack", true, false);
+        stopLoopSound("attack", true, true);
         quietShortSounds(260);
         this.addFlash("rgba(255,255,180,", 0.35);
         this.addShake(10);
