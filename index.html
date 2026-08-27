@@ -722,6 +722,7 @@
       bossDefeat: 650,
       warning: 900,
     };
+    const SILENT_FALLBACK_SOUNDS = new Set(["start", "power", "clear"]);
     const lastSoundAt = {};
     let activeSoundPriority = 0;
     let activeSoundLockUntil = 0;
@@ -886,8 +887,10 @@
           if (priority >= SOUND_PRIORITY.enemyDefeat) {
             for (const key in SOUNDS) {
               if (key !== type && (SOUND_PRIORITY[key] || 0) < priority) {
-                SOUNDS[key].pause();
-                SOUNDS[key].currentTime = 0;
+                if (type === "bossDefeat") {
+                  SOUNDS[key].pause();
+                  SOUNDS[key].currentTime = 0;
+                }
               }
             }
           }
@@ -907,6 +910,8 @@
           return;
         } catch (err) {}
       }
+
+      if (SILENT_FALLBACK_SOUNDS.has(type)) return;
 
       try {
         audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
@@ -2499,6 +2504,7 @@
       }
 
       updateAmbientEffects(dt) {
+        if (IS_IOS) return;
         const ambient = this.getAmbientProfile();
         const tension = this.getBossTension();
         const chance = (ambient.chance + tension * 0.52) * EFFECT_QUALITY;
@@ -3165,14 +3171,14 @@
           return;
         }
 
-        this.drawGroundLightLines();
+        if (!IS_IOS) this.drawGroundLightLines();
         this.drawObstacles();
         this.drawEnemies();
         this.drawBoss();
         this.drawPlayer();
-        this.drawForeground();
-        this.drawBossAtmosphere();
-        this.drawStageFog();
+        if (!IS_IOS) this.drawForeground();
+        if (!IS_IOS) this.drawBossAtmosphere();
+        if (!IS_IOS) this.drawStageFog();
         this.drawPowerups();
         this.drawBullets();
         this.drawEnemyBullets();
@@ -5099,7 +5105,15 @@
       input.gpPrevRightSelect = dpadRight || dpadDown;
     }
 
+    let lastFrameTime = 0;
+
     function gameLoop(time) {
+      if (IS_IOS && lastFrameTime && time - lastFrameTime < 32) {
+        requestAnimationFrame(gameLoop);
+        return;
+      }
+      lastFrameTime = time;
+
       const dt = game.lastTime ? (time - game.lastTime) / 1000 : 0;
       game.lastTime = time;
 
