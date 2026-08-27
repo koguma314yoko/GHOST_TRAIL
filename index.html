@@ -830,6 +830,17 @@
       }
     }
 
+    function quietShortSounds(lockMs = 320) {
+      for (const key in SOUNDS) {
+        try {
+          SOUNDS[key].pause();
+          SOUNDS[key].currentTime = 0;
+        } catch (err) {}
+      }
+      activeSoundPriority = 6;
+      activeSoundLockUntil = performance.now() + lockMs;
+    }
+
     function syncLoopSounds(game, dt) {
       if (!soundEnabled || game.state !== "playing") {
         stopLoopSound("attack");
@@ -899,7 +910,8 @@
         const now = audioCtx.currentTime;
         const master = audioCtx.createGain();
         master.gain.setValueAtTime(0.0001, now);
-        master.gain.exponentialRampToValueAtTime(0.08, now + 0.012);
+        const fallbackPeak = type === "clear" || type === "power" ? 0.045 : 0.08;
+        master.gain.exponentialRampToValueAtTime(fallbackPeak, now + 0.012);
         master.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
         master.connect(audioCtx.destination);
 
@@ -919,7 +931,8 @@
           osc.type = type === "hit" ? "sawtooth" : "triangle";
           osc.frequency.setValueAtTime(freq, t);
           gain.gain.setValueAtTime(0.0001, t);
-          gain.gain.exponentialRampToValueAtTime(type === "hit" ? 0.09 : 0.06, t + 0.01);
+          const notePeak = type === "hit" ? 0.09 : (type === "clear" || type === "power" ? 0.038 : 0.06);
+          gain.gain.exponentialRampToValueAtTime(notePeak, t + 0.01);
           gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
           osc.connect(gain);
           gain.connect(master);
@@ -1390,6 +1403,8 @@
       clearStage() {
         this.bestScore = Math.max(this.bestScore, this.score);
         localStorage.setItem("branchQuestBest", String(this.bestScore));
+        stopLoopSound("attack", true, false);
+        quietShortSounds(260);
         this.addFlash("rgba(255,255,180,", 0.35);
         this.addShake(10);
         this.addStageClearBurst();
