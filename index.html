@@ -232,11 +232,18 @@
     const W = 720;
     const H = 1280;
     const IS_MOBILE_DISPLAY = window.matchMedia("(pointer: coarse), (max-width: 720px)").matches;
-    const EFFECT_QUALITY = IS_MOBILE_DISPLAY ? 0.55 : 1;
-    const TRAIL_QUALITY = IS_MOBILE_DISPLAY ? 0.42 : 1;
-    const MAX_PARTICLES = IS_MOBILE_DISPLAY ? 170 : 430;
-    const MAX_SHOCKWAVES = IS_MOBILE_DISPLAY ? 18 : 42;
-    const MAX_SLASHES = IS_MOBILE_DISPLAY ? 14 : 34;
+    const RENDER_SCALE = IS_MOBILE_DISPLAY ? 0.72 : 1;
+    const EFFECT_QUALITY = IS_MOBILE_DISPLAY ? 0.38 : 1;
+    const TRAIL_QUALITY = IS_MOBILE_DISPLAY ? 0.24 : 1;
+    const MAX_PARTICLES = IS_MOBILE_DISPLAY ? 110 : 430;
+    const MAX_SHOCKWAVES = IS_MOBILE_DISPLAY ? 12 : 42;
+    const MAX_SLASHES = IS_MOBILE_DISPLAY ? 9 : 34;
+
+    if (RENDER_SCALE < 1) {
+      canvas.width = Math.round(W * RENDER_SCALE);
+      canvas.height = Math.round(H * RENDER_SCALE);
+      ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
+    }
 
     const GAME_TITLE = "GHOST TRAIL";
     const GAME_SUBTITLE = "幽霊の道を駆け抜ける冒険";
@@ -621,6 +628,8 @@
       touchLeft: false,
       touchRight: false,
       touchAttack: false,
+      touchMoveActive: false,
+      touchTargetX: null,
 
       gpLeft: false,
       gpRight: false,
@@ -641,6 +650,10 @@
 
     function isRightPressed() {
       return input.keyRight || input.touchRight || input.gpRight;
+    }
+
+    function isTouchMoveActive() {
+      return input.touchMoveActive && input.touchTargetX !== null;
     }
 
     function isAttackPressed() {
@@ -992,7 +1005,7 @@
         this.slashes = [];
 
         this.spawnTimer = 0.5;
-        this.powerTimer = 4.2;
+        this.powerTimer = stageId === "forest1" ? 2.2 : 4.2;
         this.obstacleTimer = 2.1;
 
         this.boss = null;
@@ -1532,7 +1545,8 @@
           p.x += p.evadeDir * 940 * dt;
           p.invuln = Math.max(p.invuln, 0.12);
 
-          for (let i = 0; i < 3; i++) {
+          const evadeTrailCount = Math.random() < TRAIL_QUALITY ? (IS_MOBILE_DISPLAY ? 1 : 3) : 0;
+          for (let i = 0; i < evadeTrailCount; i++) {
             this.addParticle({
               x: p.x + rand(-20, 20),
               y: p.y + rand(-20, 20),
@@ -1543,6 +1557,15 @@
               size: rand(4, 10),
               type: "circle",
             });
+          }
+        } else if (isTouchMoveActive()) {
+          const targetX = clamp(input.touchTargetX, 70, W - 70);
+          const dx = targetX - p.x;
+          const deadZone = IS_MOBILE_DISPLAY ? 8 : 4;
+          if (Math.abs(dx) > deadZone) {
+            const followSpeed = IS_MOBILE_DISPLAY ? 520 : 700;
+            const step = Math.sign(dx) * Math.min(Math.abs(dx), followSpeed * dt);
+            p.x += step;
           }
         } else {
           p.x += dir * p.speed * dt;
@@ -1807,7 +1830,7 @@
           x,
           y,
           age: 0,
-          r: 24,
+          r: IS_MOBILE_DISPLAY ? 30 : 24,
           hp: 2,
           maxHp: 2,
           type,
@@ -2692,7 +2715,7 @@
 
         for (let i = this.powerups.length - 1; i >= 0; i--) {
           const item = this.powerups[i];
-          const rr = item.r + p.r;
+          const rr = item.r + p.r + (IS_MOBILE_DISPLAY ? 22 : 8);
 
           if (dist2(item.x, item.y, p.x, p.y) < rr * rr) {
             this.powerups.splice(i, 1);
@@ -5089,9 +5112,20 @@
     }
 
     let movePointerId = null;
+    let touchStartX = 0;
+    let touchStartPlayerX = 0;
 
     function updateTouchMove(e) {
       const pos = getCanvasPos(e);
+      if (IS_MOBILE_DISPLAY) {
+        const sensitivity = 0.62;
+        input.touchTargetX = clamp(touchStartPlayerX + (pos.x - touchStartX) * sensitivity, 70, W - 70);
+        input.touchMoveActive = true;
+        input.touchLeft = false;
+        input.touchRight = false;
+        return;
+      }
+
       input.touchLeft = pos.x < W / 2;
       input.touchRight = pos.x >= W / 2;
     }
@@ -5100,6 +5134,8 @@
       movePointerId = null;
       input.touchLeft = false;
       input.touchRight = false;
+      input.touchMoveActive = false;
+      input.touchTargetX = null;
     }
 
     canvas.addEventListener("pointerdown", (e) => {
@@ -5184,6 +5220,8 @@
 
       if (game.state === "playing") {
         movePointerId = e.pointerId;
+        touchStartX = pos.x;
+        touchStartPlayerX = game.player?.x ?? W / 2;
         try {
           canvas.setPointerCapture(e.pointerId);
         } catch (err) {}
