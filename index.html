@@ -240,15 +240,13 @@
 
     const W = 720;
     const H = 1280;
-    const USER_AGENT = navigator.userAgent || "";
-    const IS_IOS = /iPad|iPhone|iPod/.test(USER_AGENT) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     const IS_MOBILE_DISPLAY = window.matchMedia("(pointer: coarse), (max-width: 720px)").matches;
-    const RENDER_SCALE = IS_IOS ? 0.58 : (IS_MOBILE_DISPLAY ? 0.72 : 1);
-    const EFFECT_QUALITY = IS_IOS ? 0.25 : (IS_MOBILE_DISPLAY ? 0.38 : 1);
-    const TRAIL_QUALITY = IS_IOS ? 0.12 : (IS_MOBILE_DISPLAY ? 0.24 : 1);
-    const MAX_PARTICLES = IS_IOS ? 70 : (IS_MOBILE_DISPLAY ? 110 : 430);
-    const MAX_SHOCKWAVES = IS_IOS ? 8 : (IS_MOBILE_DISPLAY ? 12 : 42);
-    const MAX_SLASHES = IS_IOS ? 6 : (IS_MOBILE_DISPLAY ? 9 : 34);
+    const RENDER_SCALE = IS_MOBILE_DISPLAY ? 0.72 : 1;
+    const EFFECT_QUALITY = IS_MOBILE_DISPLAY ? 0.38 : 1;
+    const TRAIL_QUALITY = IS_MOBILE_DISPLAY ? 0.24 : 1;
+    const MAX_PARTICLES = IS_MOBILE_DISPLAY ? 110 : 430;
+    const MAX_SHOCKWAVES = IS_MOBILE_DISPLAY ? 12 : 42;
+    const MAX_SLASHES = IS_MOBILE_DISPLAY ? 9 : 34;
 
     if (RENDER_SCALE < 1) {
       canvas.width = Math.round(W * RENDER_SCALE);
@@ -1371,10 +1369,10 @@
 
       confirmGameOverSelection() {
         if (this.state !== "gameover") return;
-        playSound("select");
         if (this.gameOverSelection === 0) {
           this.continueStage();
         } else {
+          playSound("select");
           this.quitToTitle();
         }
       }
@@ -1385,10 +1383,13 @@
 
       continueStage() {
         if (!this.canContinue()) {
+          quietShortSounds(360);
           this.start();
           return;
         }
 
+        quietShortSounds(360);
+        stopLoopSound("attack", true, true);
         const snap = this.continueSnapshot;
         this.reset(
           snap.stageId,
@@ -2504,7 +2505,6 @@
       }
 
       updateAmbientEffects(dt) {
-        if (IS_IOS) return;
         const ambient = this.getAmbientProfile();
         const tension = this.getBossTension();
         const chance = (ambient.chance + tension * 0.52) * EFFECT_QUALITY;
@@ -3171,14 +3171,14 @@
           return;
         }
 
-        if (!IS_IOS) this.drawGroundLightLines();
+        this.drawGroundLightLines();
         this.drawObstacles();
         this.drawEnemies();
         this.drawBoss();
         this.drawPlayer();
-        if (!IS_IOS) this.drawForeground();
-        if (!IS_IOS) this.drawBossAtmosphere();
-        if (!IS_IOS) this.drawStageFog();
+        this.drawForeground();
+        this.drawBossAtmosphere();
+        this.drawStageFog();
         this.drawPowerups();
         this.drawBullets();
         this.drawEnemyBullets();
@@ -5105,15 +5105,7 @@
       input.gpPrevRightSelect = dpadRight || dpadDown;
     }
 
-    let lastFrameTime = 0;
-
     function gameLoop(time) {
-      if (IS_IOS && lastFrameTime && time - lastFrameTime < 32) {
-        requestAnimationFrame(gameLoop);
-        return;
-      }
-      lastFrameTime = time;
-
       const dt = game.lastTime ? (time - game.lastTime) / 1000 : 0;
       game.lastTime = time;
 
