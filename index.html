@@ -196,20 +196,20 @@
       --------------------------------------------------
       index.html と同じ場所に assets フォルダを作り、画像を置くと自動で差し替えます。
 
-      assets/forest_bg.png
+      assets/forest_bg.webp
       assets/forest_bg01.png
-      assets/forest_bg_Stage2_00.png
-      assets/forest_bg_Stage2_01.png
+      assets/forest_bg_Stage2_00.webp
+      assets/forest_bg_Stage2_01.webp
       assets/forest_bg_Stage2_02.png
-      assets/forest_bg_Stage3_00.png
-      assets/forest_bg_Stage3_01.png
-      assets/forest_bg_Stage4_00.png
-      assets/forest_bg_Stage4_01.png
-      assets/forest_bg_Stage5_00.png
-      assets/forest_bg_Stage5_01.png
+      assets/forest_bg_Stage3_00.webp
+      assets/forest_bg_Stage3_01.webp
+      assets/forest_bg_Stage4_00.webp
+      assets/forest_bg_Stage4_01.webp
+      assets/forest_bg_Stage5_00.webp
+      assets/forest_bg_Stage5_01.webp
       assets/forest_bg_Stage5_02.png
-      assets/forest_bg_Stage6_00.png
-      assets/forest_bg_Stage6_01.png
+      assets/forest_bg_Stage6_00.webp
+      assets/forest_bg_Stage6_01.webp
       assets/forest_bg_Stage6_02.png
 
       アニメーション画像を使う場合は、横4コマのスプライトシートを置くと自動で使います。
@@ -260,20 +260,20 @@
     const ASSET_PATHS = {
       fogEffect: "assets/Eff_fog00.png",
       titleScreen: "assets/TitleScreen00.png",
-      forestBg: "assets/forest_bg.png",
+      forestBg: "assets/forest_bg.webp",
       forestFg: "assets/forest_bg01.png",
-      caveBg: "assets/forest_bg_Stage2_00.png",
-      riverBg: "assets/forest_bg_Stage2_01.png",
+      caveBg: "assets/forest_bg_Stage2_00.webp",
+      riverBg: "assets/forest_bg_Stage2_01.webp",
       riverBgOverlay: "assets/forest_bg_Stage2_02.png",
-      ruinsBg0: "assets/forest_bg_Stage3_00.png",
-      ruinsBg1: "assets/forest_bg_Stage3_01.png",
-      mountainBg: "assets/forest_bg_Stage4_00.png",
-      fogBg: "assets/forest_bg_Stage4_01.png",
-      worldTreeBg0: "assets/forest_bg_Stage5_00.png",
-      worldTreeBg1: "assets/forest_bg_Stage5_01.png",
+      ruinsBg0: "assets/forest_bg_Stage3_00.webp",
+      ruinsBg1: "assets/forest_bg_Stage3_01.webp",
+      mountainBg: "assets/forest_bg_Stage4_00.webp",
+      fogBg: "assets/forest_bg_Stage4_01.webp",
+      worldTreeBg0: "assets/forest_bg_Stage5_00.webp",
+      worldTreeBg1: "assets/forest_bg_Stage5_01.webp",
       worldTreeBg2: "assets/forest_bg_Stage5_02.png",
-      castleBg0: "assets/forest_bg_Stage6_00.png",
-      castleBg1: "assets/forest_bg_Stage6_01.png",
+      castleBg0: "assets/forest_bg_Stage6_00.webp",
+      castleBg1: "assets/forest_bg_Stage6_01.webp",
       castleBg2: "assets/forest_bg_Stage6_02.png",
       groundTile: "assets/ground_tile.png",
       playerSheet: "assets/player_sheet.png",
@@ -335,7 +335,7 @@
           mid: ["splitSlime", "splitSlime", "charger", "charger", "golemSlow", "golemSlow", "golemShooter", "bat"],
           late: ["splitSlime", "charger", "charger", "golemSlow", "golemSlow", "golemShooter", "golemShooter", "boarAlt"],
         },
-        bossHp: 65,
+        bossHp: 72,
         bossName: "森のガーディアン",
         clearMode: "branch",
         routeOptions: [
@@ -366,7 +366,7 @@
           mid: ["slime", "slimeAlt", "splitSlime", "mushroom", "bat", "swarmBat", "boar"],
           late: ["mushroom", "scatterMushroom", "splitSlime", "bat", "swarmBat", "boar", "boarAlt", "charger"],
         },
-        bossHp: 70,
+        bossHp: 78,
         bossName: "川辺のガーディアン",
         clearMode: "next",
         nextStage: "ruins3",
@@ -393,7 +393,7 @@
           mid: ["bat", "swarmBat", "boar", "boarAlt", "charger", "mushroom", "scatterMushroom", "golemSlow"],
           late: ["boar", "boarAlt", "charger", "guardBoar", "golemSlow", "golemShooter", "burstGolem", "bat", "swarmBat"],
         },
-        bossHp: 125,
+        bossHp: 138,
         bossName: "洞窟のガーディアン",
         clearMode: "next",
         nextStage: "ruins3",
@@ -422,7 +422,7 @@
           mid: ["bat", "swarmBat", "mushroom", "scatterMushroom", "golemShooter", "boar", "boarAlt", "splitSlime"],
           late: ["golemShooter", "burstGolem", "boar", "boarAlt", "charger", "guardBoar", "golemSlow", "bat"],
         },
-        bossHp: 105,
+        bossHp: 118,
         bossName: "遺跡の番人",
         clearMode: "branch",
         routeOptions: [
@@ -457,7 +457,7 @@
           mid: ["boar", "boarAlt", "charger", "guardBoar", "bat", "swarmBat", "mushroom", "golemSlow"],
           late: ["boar", "boarAlt", "charger", "guardBoar", "golemShooter", "golemSlow", "bat", "scatterMushroom"],
         },
-        bossHp: 110,
+        bossHp: 122,
         bossName: "山岳の守護者",
         clearMode: "next",
         nextStage: "worldTree5",
@@ -489,7 +489,7 @@
           mid: ["bat", "swarmBat", "golemShooter", "boar", "boarAlt", "charger", "guardBoar", "golemSlow"],
           late: ["golemShooter", "burstGolem", "golemSlow", "bat", "swarmBat", "boar", "boarAlt", "mushroom", "scatterMushroom"],
         },
-        bossHp: 130,
+        bossHp: 145,
         bossName: "霧森の怪影",
         clearMode: "next",
         nextStage: "worldTree5",
@@ -529,7 +529,7 @@
           mid: ["golemShooter", "boar", "boarAlt", "mushroom", "scatterMushroom", "charger", "guardBoar", "golemSlow"],
           late: ["golemShooter", "burstGolem", "golemSlow", "bat", "swarmBat", "boar", "boarAlt", "splitSlime"],
         },
-        bossHp: 125,
+        bossHp: 142,
         bossName: "世界樹の影",
         clearMode: "next",
         nextStage: "castleFinal",
@@ -568,7 +568,7 @@
           mid: ["golemShooter", "golemSlow", "boar", "boarAlt", "charger", "guardBoar", "mushroom"],
           late: ["golemSlow", "golemShooter", "burstGolem", "bat", "boar", "boarAlt", "charger", "guardBoar"],
         },
-        bossHp: 135,
+        bossHp: 165,
         bossName: "王城の中ボス",
         clearMode: "complete",
       },
@@ -725,7 +725,7 @@
     let activeSoundPriority = 0;
     let activeSoundLockUntil = 0;
     const ENEMY_HP_MULTIPLIER = 0.62;
-    const BOSS_HP_MULTIPLIER = 0.72;
+    const BOSS_HP_MULTIPLIER = 0.78;
     const ENEMY_SPEED_MULTIPLIER = 0.9;
     const ENEMY_BULLET_SPEED_MULTIPLIER = 0.9;
     const ENEMY_SPAWN_INTERVAL_MULTIPLIER = 0.74;
@@ -1281,6 +1281,31 @@
         if (lv === 2) return { hp: 0.84, speed: 0.94, shot: 0.78 };
         if (lv === 3) return { hp: 0.94, speed: 0.98, shot: 0.9 };
         return { hp: 1, speed: 1, shot: 1 };
+      }
+
+      getBossWeaponPressure() {
+        const lv = this.player?.weaponLevel || 1;
+        const table = [
+          null,
+          { hp: 0.9, shot: 0.9, interval: 1.16, bulletSpeed: 0.94, summon: 1.18 },
+          { hp: 0.98, shot: 0.96, interval: 1.08, bulletSpeed: 0.98, summon: 1.1 },
+          { hp: 1.06, shot: 1.02, interval: 1.0, bulletSpeed: 1.0, summon: 1.0 },
+          { hp: 1.16, shot: 1.1, interval: 0.92, bulletSpeed: 1.04, summon: 0.93 },
+          { hp: 1.28, shot: 1.18, interval: 0.84, bulletSpeed: 1.08, summon: 0.86 },
+        ];
+        const pressure = table[clamp(lv, 1, 5)];
+
+        if (this.stageId === "castleFinal") {
+          return {
+            hp: pressure.hp * 1.12,
+            shot: pressure.shot * 1.12,
+            interval: pressure.interval * 0.88,
+            bulletSpeed: pressure.bulletSpeed * 1.08,
+            summon: pressure.summon * 0.88,
+          };
+        }
+
+        return pressure;
       }
 
       getLoopSpawnMultiplier() {
@@ -2107,17 +2132,21 @@
         this.addFlash(drama.flash, drama.flashAlpha);
         this.addShake(drama.shake);
         this.warningTimer = drama.warningTime;
+        const pressure = this.getBossWeaponPressure();
+        const bossHp = Math.max(18, Math.round(
+          this.stage.bossHp * this.getLoopDifficultyMultiplier() * BOSS_HP_MULTIPLIER * pressure.hp
+        ));
 
         this.boss = {
           active: true,
           x: W / 2,
           y: 300,
           r: 86,
-          hp: Math.max(18, Math.round(this.stage.bossHp * this.getLoopDifficultyMultiplier() * BOSS_HP_MULTIPLIER)),
-          maxHp: Math.max(18, Math.round(this.stage.bossHp * this.getLoopDifficultyMultiplier() * BOSS_HP_MULTIPLIER)),
+          hp: bossHp,
+          maxHp: bossHp,
           age: 0,
-          shootTimer: 1.2,
-          summonTimer: 3.0,
+          shootTimer: rand(this.stage.bossInterval[0], this.stage.bossInterval[1]) * pressure.interval,
+          summonTimer: 3.0 * pressure.summon,
           hitFlash: 0,
         };
 
@@ -2176,17 +2205,18 @@
         b.x = W / 2 + Math.sin(b.age * 1.15) * 185;
         b.y = 300 + Math.sin(b.age * 1.6) * 24;
 
+        const pressure = this.getBossWeaponPressure();
         b.shootTimer -= dt;
 
         if (b.shootTimer <= 0) {
-          b.shootTimer = rand(0.75, 1.25);
+          b.shootTimer = rand(this.stage.bossInterval[0], this.stage.bossInterval[1]) * pressure.interval;
 
-          if (Math.random() <= (this.stage.bossShotChance ?? 1) * this.getWeaponRelief().shot) {
+          if (Math.random() <= (this.stage.bossShotChance ?? 1) * this.getWeaponRelief().shot * pressure.shot) {
             const p = this.player;
             const dx = p.x - b.x;
             const dy = p.y - b.y;
             const len = Math.max(1, Math.sqrt(dx * dx + dy * dy));
-            const spd = 315;
+            const spd = 315 * pressure.bulletSpeed;
 
             this.fireEnemyBullet(
               b.x,
@@ -2199,9 +2229,9 @@
 
             this.addShockwave(b.x, b.y + 45, 48, 0.25, "rgba(255,100,80,0.55)", 4);
 
-            if (b.hp < b.maxHp * 0.5) {
-              this.fireEnemyBullet(b.x - 45, b.y + 42, -75, 320, 10, 1);
-              this.fireEnemyBullet(b.x + 45, b.y + 42, 75, 320, 10, 1);
+            if (b.hp < b.maxHp * 0.55) {
+              this.fireEnemyBullet(b.x - 45, b.y + 42, -75 * pressure.bulletSpeed, 320 * pressure.bulletSpeed, 10, 1);
+              this.fireEnemyBullet(b.x + 45, b.y + 42, 75 * pressure.bulletSpeed, 320 * pressure.bulletSpeed, 10, 1);
             }
           }
         }
@@ -2209,7 +2239,7 @@
         b.summonTimer -= dt;
 
         if (b.summonTimer <= 0) {
-          b.summonTimer = rand(3.0, 4.4);
+          b.summonTimer = rand(3.0, 4.4) * pressure.summon;
           const pool = this.stage.enemyPools?.mid || ["slime", "bat"];
           this.spawnEnemy(pool[Math.floor(Math.random() * pool.length)]);
           this.showMessage(this.t("小さな敵を呼び出した！", "The boss summoned enemies!"), 1.0);
