@@ -744,7 +744,7 @@
 
     for (const key in LOOP_SOUND_PATHS) {
       const audio = new Audio(LOOP_SOUND_PATHS[key]);
-      audio.preload = "auto";
+      audio.preload = key === "attack" ? "auto" : "metadata";
       audio.loop = true;
       audio.volume = LOOP_BASE_VOLUME[key] || 0.25;
       LOOP_SOUNDS[key] = audio;
