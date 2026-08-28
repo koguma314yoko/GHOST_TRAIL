@@ -197,20 +197,20 @@
       index.html と同じ場所に assets フォルダを作り、画像を置くと自動で差し替えます。
 
       assets/forest_bg.webp
-      assets/forest_bg01.png
+      assets/forest_bg01.webp
       assets/forest_bg_Stage2_00.webp
       assets/forest_bg_Stage2_01.webp
-      assets/forest_bg_Stage2_02.png
+      assets/forest_bg_Stage2_02.webp
       assets/forest_bg_Stage3_00.webp
       assets/forest_bg_Stage3_01.webp
       assets/forest_bg_Stage4_00.webp
       assets/forest_bg_Stage4_01.webp
       assets/forest_bg_Stage5_00.webp
       assets/forest_bg_Stage5_01.webp
-      assets/forest_bg_Stage5_02.png
+      assets/forest_bg_Stage5_02.webp
       assets/forest_bg_Stage6_00.webp
       assets/forest_bg_Stage6_01.webp
-      assets/forest_bg_Stage6_02.png
+      assets/forest_bg_Stage6_02.webp
 
       アニメーション画像を使う場合は、横4コマのスプライトシートを置くと自動で使います。
       assets/player_sheet.png
@@ -258,24 +258,24 @@
     const GAME_SUBTITLE = "幽霊の道を駆け抜ける冒険";
 
     const ASSET_PATHS = {
-      fogEffect: "assets/Eff_fog00.png",
+      fogEffect: "assets/Eff_fog00.webp",
       titleScreen: "assets/TitleScreen00.png",
       forestBg: "assets/forest_bg.webp",
-      forestFg: "assets/forest_bg01.png",
+      forestFg: "assets/forest_bg01.webp",
       caveBg: "assets/forest_bg_Stage2_00.webp",
       riverBg: "assets/forest_bg_Stage2_01.webp",
-      riverBgOverlay: "assets/forest_bg_Stage2_02.png",
+      riverBgOverlay: "assets/forest_bg_Stage2_02.webp",
       ruinsBg0: "assets/forest_bg_Stage3_00.webp",
       ruinsBg1: "assets/forest_bg_Stage3_01.webp",
       mountainBg: "assets/forest_bg_Stage4_00.webp",
       fogBg: "assets/forest_bg_Stage4_01.webp",
       worldTreeBg0: "assets/forest_bg_Stage5_00.webp",
       worldTreeBg1: "assets/forest_bg_Stage5_01.webp",
-      worldTreeBg2: "assets/forest_bg_Stage5_02.png",
+      worldTreeBg2: "assets/forest_bg_Stage5_02.webp",
       castleBg0: "assets/forest_bg_Stage6_00.webp",
       castleBg1: "assets/forest_bg_Stage6_01.webp",
-      castleBg2: "assets/forest_bg_Stage6_02.png",
-      groundTile: "assets/ground_tile.png",
+      castleBg2: "assets/forest_bg_Stage6_02.webp",
+      groundTile: "assets/ground_tile.webp",
       playerSheet: "assets/player_sheet.png",
       slimeSheet: "assets/slime_sheet.png",
       slimeAltSheet: "assets/slime_sheet01.png",
@@ -542,10 +542,10 @@
         bgRandomize: true,
         bgGlobalOverlay: {
           key: "castleBg2",
-          alpha: 0.34,
+          alpha: 0.02,
           blend: "lighter",
-          flicker: 0.48,
-          flickerSpeed: 180,
+          flicker: 0.86,
+          flickerSpeed: 260,
         },
         length: 49200,
         difficulty: 1.2,
@@ -5174,7 +5174,7 @@
     function updateTouchMove(e) {
       const pos = getCanvasPos(e);
       if (IS_MOBILE_DISPLAY) {
-        const sensitivity = 0.62;
+        const sensitivity = 0.74;
         input.touchTargetX = clamp(touchStartPlayerX + (pos.x - touchStartX) * sensitivity, 70, W - 70);
         input.touchMoveActive = true;
         input.touchLeft = false;
