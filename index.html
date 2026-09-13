@@ -241,7 +241,15 @@
     const W = 720;
     const H = 1280;
     const IS_MOBILE_DISPLAY = window.matchMedia("(pointer: coarse), (max-width: 720px)").matches;
-    const SHOW_GAMEPAD_DEBUG = new URLSearchParams(window.location.search).has("paddebug");
+    const URL_OPTIONS = new URLSearchParams(window.location.search);
+    const SHOW_GAMEPAD_DEBUG = URL_OPTIONS.has("paddebug");
+    const FORCE_NO_AUDIO = URL_OPTIONS.has("noaudio");
+    const FORCE_NO_BGM = URL_OPTIONS.has("nobgm");
+    const FORCE_NO_SFX = URL_OPTIONS.has("nosfx");
+    const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const IOS_LIGHT_AUDIO = IS_IOS && !URL_OPTIONS.has("fullaudio");
+    const IOS_LIGHT_SFX = IS_IOS && !URL_OPTIONS.has("fullsfx");
     const RENDER_SCALE = IS_MOBILE_DISPLAY ? 0.72 : 1;
     const EFFECT_QUALITY = IS_MOBILE_DISPLAY ? 0.38 : 1;
     const TRAIL_QUALITY = IS_MOBILE_DISPLAY ? 0.24 : 1;
@@ -719,7 +727,7 @@
     };
 
     let audioCtx = null;
-    let soundEnabled = localStorage.getItem("branchQuestSound") !== "off";
+    let soundEnabled = !FORCE_NO_AUDIO && localStorage.getItem("branchQuestSound") !== "off";
     const SOUND_PATHS = {
       enemyHit: "assets/Enemydamage00.mp3",
       enemyDefeat: "assets/Enemydamage01.mp3",
@@ -751,10 +759,10 @@
       warning: 5,
     };
     const SOUND_LOCK_MS = {
-      enemyHit: 120,
-      itemGet: 80,
-      playerDamage: 180,
-      enemyDefeat: 220,
+      enemyHit: IOS_LIGHT_AUDIO ? 190 : 120,
+      itemGet: IOS_LIGHT_AUDIO ? 120 : 80,
+      playerDamage: IOS_LIGHT_AUDIO ? 240 : 180,
+      enemyDefeat: IOS_LIGHT_AUDIO ? 280 : 220,
       bossDefeat: 650,
       warning: 900,
     };
@@ -775,14 +783,14 @@
 
     for (const key in SOUND_PATHS) {
       const audio = new Audio(SOUND_PATHS[key]);
-      audio.preload = "auto";
+      audio.preload = IOS_LIGHT_AUDIO ? "metadata" : "auto";
       audio.volume = key === "playerDamage" ? 0.82 : 0.72;
       SOUNDS[key] = audio;
     }
 
     for (const key in LOOP_SOUND_PATHS) {
       const audio = new Audio(LOOP_SOUND_PATHS[key]);
-      audio.preload = key === "attack" ? "auto" : "metadata";
+      audio.preload = key === "attack" && !IOS_LIGHT_AUDIO ? "auto" : "metadata";
       audio.loop = true;
       audio.volume = LOOP_BASE_VOLUME[key] || 0.25;
       LOOP_SOUNDS[key] = audio;
@@ -884,7 +892,7 @@
     }
 
     function syncLoopSounds(game, dt) {
-      if (!soundEnabled || game.state !== "playing") {
+      if (!soundEnabled || FORCE_NO_BGM || game.state !== "playing") {
         stopLoopSound("attack", true, true);
         const keepBgmPosition = soundEnabled && (game.state === "branch" || game.state === "complete");
         stopLoopSound("bgm", !keepBgmPosition, true);
@@ -898,12 +906,17 @@
 
       stopLoopSound(otherBgmKey, true, true);
       playLoopSound(bgmKey, true);
-      playLoopSound("attack");
+      if (IOS_LIGHT_AUDIO) {
+        stopLoopSound("attack", true, true);
+      } else {
+        playLoopSound("attack");
+      }
       updateLoopFades(dt);
     }
 
     function playSound(type) {
-      if (!soundEnabled) return;
+      if (!soundEnabled || FORCE_NO_SFX) return;
+      if (IOS_LIGHT_SFX && type === "enemyHit") return;
 
       const fileSound = SOUNDS[type];
       if (fileSound) {
