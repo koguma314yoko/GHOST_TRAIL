@@ -231,7 +231,7 @@
     */
 
     const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d", { alpha: false });
+    const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
     const touchControls = document.querySelector(".controls");
     const topControls = document.querySelector(".topControls");
     const evadeBtn = document.getElementById("evadeBtn");
@@ -263,6 +263,7 @@
     }
 
     applyCanvasQuality();
+    const CANVAS_ASSET_CACHE = new Map();
 
     const GAME_TITLE = "GHOST TRAIL";
     const GAME_SUBTITLE = "幽霊の道を駆け抜ける冒険";
@@ -597,6 +598,27 @@
       return img && img.complete && img.naturalWidth > 0;
     }
 
+    function getCachedAsset(key, w = W, h = H) {
+      if (!imageReady(key)) return null;
+
+      const cacheKey = `${key}:${Math.round(w)}x${Math.round(h)}`;
+      const cached = CANVAS_ASSET_CACHE.get(cacheKey);
+      if (cached) return cached;
+
+      const source = IMAGES[key];
+      const buffer = document.createElement("canvas");
+      buffer.width = Math.round(w);
+      buffer.height = Math.round(h);
+      const bufferCtx = buffer.getContext("2d", { alpha: true });
+      bufferCtx.imageSmoothingEnabled = true;
+      if ("imageSmoothingQuality" in bufferCtx) {
+        bufferCtx.imageSmoothingQuality = "high";
+      }
+      bufferCtx.drawImage(source, 0, 0, buffer.width, buffer.height);
+      CANVAS_ASSET_CACHE.set(cacheKey, buffer);
+      return buffer;
+    }
+
     function drawAsset(key, x, y, w, h, rot = 0, alpha = 1) {
       if (!imageReady(key)) return false;
 
@@ -651,6 +673,8 @@
       touchAttack: false,
       touchMoveActive: false,
       touchTargetX: null,
+      mouseMoveActive: false,
+      mouseTargetX: null,
 
       gpLeft: false,
       gpRight: false,
@@ -675,7 +699,8 @@
     }
 
     function isTouchMoveActive() {
-      return input.touchMoveActive && input.touchTargetX !== null;
+      return (input.touchMoveActive && input.touchTargetX !== null) ||
+        (input.mouseMoveActive && input.mouseTargetX !== null);
     }
 
     function isAttackPressed() {
@@ -1623,11 +1648,12 @@
             });
           }
         } else if (isTouchMoveActive()) {
-          const targetX = clamp(input.touchTargetX, 70, W - 70);
+          const rawTargetX = input.touchMoveActive ? input.touchTargetX : input.mouseTargetX;
+          const targetX = clamp(rawTargetX, 70, W - 70);
           const dx = targetX - p.x;
           const deadZone = IS_MOBILE_DISPLAY ? 8 : 4;
           if (Math.abs(dx) > deadZone) {
-            const followSpeed = IS_MOBILE_DISPLAY ? 520 : 700;
+            const followSpeed = IS_MOBILE_DISPLAY ? 520 : 820;
             const step = Math.sign(dx) * Math.min(Math.abs(dx), followSpeed * dt);
             p.x += step;
           }
@@ -3280,20 +3306,22 @@
               ? this.seededTileChoice(tileIndex, bgKeys.length)
               : ((tileIndex % bgKeys.length) + bgKeys.length) % bgKeys.length;
             const key = bgKeys[keyIndex];
-            const img = IMAGES[key];
+            const img = getCachedAsset(key);
             const y = Math.floor(scroll + layer * tileH);
             ctx.drawImage(img, 0, y, W, tileH + 1);
 
             const overlay = this.stage.bgOverlays?.[key];
             if (overlay && imageReady(overlay.key)) {
+              const overlayImg = getCachedAsset(overlay.key);
               ctx.save();
               ctx.globalAlpha = overlay.alpha ?? 1;
-              ctx.drawImage(IMAGES[overlay.key], 0, y, W, tileH + 1);
+              ctx.drawImage(overlayImg, 0, y, W, tileH + 1);
               ctx.restore();
             }
 
             const globalOverlay = this.stage.bgGlobalOverlay;
             if (globalOverlay && imageReady(globalOverlay.key)) {
+              const globalOverlayImg = getCachedAsset(globalOverlay.key);
               const pulse = globalOverlay.flicker
                 ? (Math.sin(performance.now() / (globalOverlay.flickerSpeed || 1000) + tileIndex * 1.7) + 1) * 0.5 * globalOverlay.flicker
                 : 0;
@@ -3301,7 +3329,7 @@
               ctx.save();
               ctx.globalCompositeOperation = globalOverlay.blend || "source-over";
               ctx.globalAlpha = clamp((globalOverlay.alpha ?? 0.5) + pulse, 0, 1);
-              ctx.drawImage(IMAGES[globalOverlay.key], 0, y, W, tileH + 1);
+              ctx.drawImage(globalOverlayImg, 0, y, W, tileH + 1);
               ctx.restore();
             }
           }
@@ -3310,7 +3338,7 @@
         }
 
         if (stageBg !== "forestBg" && imageReady("forestBg")) {
-          const img = IMAGES.forestBg;
+          const img = getCachedAsset("forestBg");
           const tileH = H;
           const scroll = this.bgScroll % tileH;
 
@@ -3479,7 +3507,7 @@
         const stageFg = this.stage.fg;
         if (!stageFg || !imageReady(stageFg)) return;
 
-        const img = IMAGES[stageFg];
+        const img = getCachedAsset(stageFg);
         const tileH = H;
         const scroll = (this.bgScroll * 1.28) % tileH;
 
@@ -3496,7 +3524,7 @@
         if (!fog || !imageReady(fog.key)) return;
 
         const tension = this.getBossTension();
-        const img = IMAGES[fog.key];
+        const img = getCachedAsset(fog.key, W + 92, H);
         const tileH = H;
         const scroll = (this.bgScroll * (fog.speed || 0.6)) % tileH;
         const sway = Math.sin(performance.now() / 1800) * 26;
@@ -3513,8 +3541,8 @@
       }
 
       drawGroundTile() {
-        const img = IMAGES.groundTile;
         const tile = 256;
+        const img = getCachedAsset("groundTile", tile, tile);
         const scroll = this.bgScroll % tile;
 
         ctx.fillStyle = "#315f23";
@@ -4650,7 +4678,7 @@
 
       drawTitleBackdrop() {
         if (imageReady("titleScreen")) {
-          ctx.drawImage(IMAGES.titleScreen, 0, 0, W, H);
+          ctx.drawImage(getCachedAsset("titleScreen"), 0, 0, W, H);
         } else {
           const g = ctx.createLinearGradient(0, 0, 0, H);
           g.addColorStop(0, "#173b22");
@@ -5048,6 +5076,25 @@
       return Math.abs(strongest) > 0.18 ? strongest : 0;
     }
 
+    function strongestFallbackAxis(gp, indexes) {
+      let strongest = 0;
+
+      for (const index of indexes) {
+        const value = gp.axes[index] || 0;
+        if (Math.abs(value) > 0.98) continue;
+        if (Math.abs(value) > Math.abs(strongest)) {
+          strongest = value;
+        }
+      }
+
+      return Math.abs(strongest) > 0.18 ? strongest : 0;
+    }
+
+    function primaryAxis(gp, primaryIndexes, fallbackIndexes) {
+      const primary = strongestAxis(gp, primaryIndexes);
+      return primary || strongestFallbackAxis(gp, fallbackIndexes);
+    }
+
     function povAxisDirection(value) {
       if (typeof value !== "number" || value < -1.05 || value > 1.05) {
         return { up: false, down: false, left: false, right: false };
@@ -5119,10 +5166,10 @@
 
       input.gamepadName = gp.id || "Gamepad";
 
-      const axisX = strongestAxis(gp, [0, 2]);
-      const axisY = strongestAxis(gp, [1, 3]);
-      const axisPadX = strongestAxis(gp, [6]);
-      const axisPadY = strongestAxis(gp, [7]);
+      const axisX = primaryAxis(gp, [0, 2], [4, 6, 8]);
+      const axisY = primaryAxis(gp, [1, 3], [5, 7, 9]);
+      const axisPadX = strongestAxis(gp, [6, 8]);
+      const axisPadY = strongestAxis(gp, [7, 9]);
       const pov = povAxisDirection(gp.axes[9]);
 
       const dpadUp = gamepadButtonPressed(gp, [12]) || axisPadY < -0.45 || axisY < -0.72 || pov.up;
@@ -5243,7 +5290,8 @@
     }
 
     function gameLoop(time) {
-      const dt = game.lastTime ? (time - game.lastTime) / 1000 : 0;
+      const rawDt = game.lastTime ? (time - game.lastTime) / 1000 : 0;
+      const dt = Math.min(rawDt, 1 / 30);
       game.lastTime = time;
 
       pollGamepad();
@@ -5299,6 +5347,22 @@
       input.touchRight = false;
       input.touchMoveActive = false;
       input.touchTargetX = null;
+    }
+
+    function updateMouseMove(e) {
+      if (IS_MOBILE_DISPLAY || e.pointerType !== "mouse") return false;
+
+      const pos = getCanvasPos(e);
+      input.mouseTargetX = clamp(pos.x, 70, W - 70);
+      input.mouseMoveActive = true;
+      input.touchLeft = false;
+      input.touchRight = false;
+      return true;
+    }
+
+    function clearMouseMove() {
+      input.mouseMoveActive = false;
+      input.mouseTargetX = null;
     }
 
     canvas.addEventListener("pointerdown", (e) => {
@@ -5393,9 +5457,22 @@
     });
 
     canvas.addEventListener("pointermove", (e) => {
-      if (game.state !== "playing" || e.pointerId !== movePointerId) return;
+      if (game.state !== "playing") return;
+
+      if (movePointerId === null && updateMouseMove(e)) {
+        e.preventDefault();
+        return;
+      }
+
+      if (e.pointerId !== movePointerId) return;
       e.preventDefault();
       updateTouchMove(e);
+    });
+
+    canvas.addEventListener("pointerleave", (e) => {
+      if (e.pointerType === "mouse") {
+        clearMouseMove();
+      }
     });
 
     canvas.addEventListener("pointerup", (e) => {
