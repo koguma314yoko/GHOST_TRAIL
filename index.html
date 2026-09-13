@@ -1660,7 +1660,7 @@
               type: "circle",
             });
           }
-        } else if (isTouchMoveActive()) {
+        } else if (dir === 0 && isTouchMoveActive()) {
           const rawTargetX = input.touchMoveActive ? input.touchTargetX : input.mouseTargetX;
           const targetX = clamp(rawTargetX, 70, W - 70);
           const dx = targetX - p.x;
@@ -1837,6 +1837,7 @@
         }
 
         const relief = this.getWeaponRelief();
+        const unbreakableChance = this.getUnbreakableBulletChance(relief);
 
         this.enemyBullets.push({
           x,
@@ -1845,9 +1846,18 @@
           vy: vy * ENEMY_BULLET_SPEED_MULTIPLIER * relief.speed,
           r,
           dmg,
-          unbreakable: Math.random() < (this.stage.unbreakableBulletChance || 0) * relief.shot,
+          unbreakable: Math.random() < unbreakableChance,
           life: 10,
         });
+      }
+
+      getUnbreakableBulletChance(relief = this.getWeaponRelief()) {
+        const weaponLevel = this.player?.weaponLevel || 1;
+        const stageBase = (this.stage.unbreakableBulletChance || 0) * relief.shot;
+        const highWeaponBonus = weaponLevel >= 5 ? 0.18 : weaponLevel >= 4 ? 0.1 : 0;
+        const stageCap = this.stageId === "forest1" ? 0.22 : this.stageId === "river2" ? 0.24 : 0.34;
+
+        return clamp(stageBase + highWeaponBonus, 0, stageCap);
       }
 
       updateSpawning(dt) {
