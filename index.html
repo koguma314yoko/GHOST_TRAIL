@@ -886,6 +886,24 @@
       }
     }
 
+    function stopAllShortSounds() {
+      for (const key in SOUNDS) {
+        const audio = SOUNDS[key];
+        if (!audio) continue;
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+        } catch (err) {}
+      }
+      activeSoundPriority = 0;
+      activeSoundLockUntil = 0;
+    }
+
+    function stopGameAudio(fadeOut = false) {
+      stopAllLoopSounds(fadeOut && !IOS_LIGHT_AUDIO);
+      stopAllShortSounds();
+    }
+
     function quietShortSounds(lockMs = 320) {
       activeSoundPriority = 6;
       activeSoundLockUntil = performance.now() + lockMs;
@@ -893,10 +911,10 @@
 
     function syncLoopSounds(game, dt) {
       if (!soundEnabled || FORCE_NO_BGM || game.state !== "playing") {
-        stopLoopSound("attack", true, true);
-        const keepBgmPosition = soundEnabled && (game.state === "branch" || game.state === "complete");
-        stopLoopSound("bgm", !keepBgmPosition, true);
-        stopLoopSound("finalBgm", !keepBgmPosition, true);
+        const fadeOut = !IOS_LIGHT_AUDIO;
+        stopLoopSound("attack", true, fadeOut);
+        stopLoopSound("bgm", true, fadeOut);
+        stopLoopSound("finalBgm", true, fadeOut);
         updateLoopFades(dt);
         return;
       }
@@ -1113,6 +1131,7 @@
 
       pause() {
         if (this.state !== "playing") return;
+        stopAllLoopSounds(false);
         this.pauseSelection = 0;
         this.state = "pause";
         this.showMessage(this.t("一時停止", "Paused"), 0.4);
@@ -1132,7 +1151,7 @@
       }
 
       quitToTitle() {
-        playSound("select");
+        stopGameAudio(false);
         this.reset("forest1", { loopCount: 1 });
         this.state = "title";
       }
@@ -1189,13 +1208,14 @@
         } else if (item.id === "sound") {
           soundEnabled = !soundEnabled;
           localStorage.setItem("branchQuestSound", soundEnabled ? "on" : "off");
-          if (!soundEnabled) stopAllLoopSounds();
+          if (!soundEnabled) stopGameAudio(false);
         }
       }
 
       backToTitle() {
         if (this.state !== "howto" && this.state !== "ranking") return;
         playSound("select");
+        stopAllLoopSounds(false);
         this.state = "title";
       }
 
@@ -1420,6 +1440,7 @@
       gameOver() {
         this.bestScore = Math.max(this.bestScore, this.score);
         localStorage.setItem("branchQuestBest", String(this.bestScore));
+        stopGameAudio(false);
         this.continueSnapshot = {
           stageId: this.stageId,
           score: this.score,
@@ -1490,7 +1511,7 @@
       clearStage() {
         this.bestScore = Math.max(this.bestScore, this.score);
         localStorage.setItem("branchQuestBest", String(this.bestScore));
-        stopLoopSound("attack", true, true);
+        stopAllLoopSounds(false);
         quietShortSounds(260);
         this.addFlash("rgba(255,255,180,", 0.35);
         this.addShake(10);
