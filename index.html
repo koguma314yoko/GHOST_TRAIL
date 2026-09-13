@@ -250,6 +250,7 @@
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     const IOS_LIGHT_AUDIO = IS_IOS && !URL_OPTIONS.has("fullaudio");
     const IOS_LIGHT_SFX = IS_IOS && !URL_OPTIONS.has("fullsfx");
+    const DISABLE_IOS_BGM = IOS_LIGHT_AUDIO && !URL_OPTIONS.has("mobilebgm");
     const RENDER_SCALE = IS_MOBILE_DISPLAY ? 0.72 : 1;
     const EFFECT_QUALITY = IS_MOBILE_DISPLAY ? 0.38 : 1;
     const TRAIL_QUALITY = IS_MOBILE_DISPLAY ? 0.24 : 1;
@@ -741,6 +742,7 @@
       bgm: IOS_LIGHT_AUDIO ? "assets/AIMusic07_mobile.m4a" : "assets/AIMusic07.mp3",
       finalBgm: IOS_LIGHT_AUDIO ? "assets/AIMusic2025051511_mobile.m4a" : "assets/AIMusic2025051511.mp3",
     };
+    const isBgmLoopKey = (key) => key === "bgm" || key === "finalBgm";
     const SOUNDS = {};
     const LOOP_SOUNDS = {};
     const LOOP_BASE_VOLUME = {
@@ -789,6 +791,7 @@
     }
 
     for (const key in LOOP_SOUND_PATHS) {
+      if (DISABLE_IOS_BGM && isBgmLoopKey(key)) continue;
       const audio = new Audio(LOOP_SOUND_PATHS[key]);
       audio.preload = key === "attack" && !IOS_LIGHT_AUDIO ? "auto" : "metadata";
       audio.loop = true;
@@ -910,7 +913,7 @@
     }
 
     function syncLoopSounds(game, dt) {
-      if (!soundEnabled || FORCE_NO_BGM || game.state !== "playing") {
+      if (!soundEnabled || FORCE_NO_BGM || DISABLE_IOS_BGM || game.state !== "playing") {
         const fadeOut = !IOS_LIGHT_AUDIO;
         stopLoopSound("attack", true, fadeOut);
         stopLoopSound("bgm", true, fadeOut);
