@@ -251,6 +251,7 @@
     const IOS_LIGHT_AUDIO = IS_IOS && !URL_OPTIONS.has("fullaudio");
     const IOS_LIGHT_SFX = IS_IOS && !URL_OPTIONS.has("fullsfx");
     const DISABLE_IOS_BGM = IOS_LIGHT_AUDIO && !URL_OPTIONS.has("mobilebgm");
+    const DISABLE_IOS_SFX = IOS_LIGHT_AUDIO && !URL_OPTIONS.has("mobilesfx");
     const RENDER_SCALE = IS_MOBILE_DISPLAY ? 0.72 : 1;
     const EFFECT_QUALITY = IS_MOBILE_DISPLAY ? 0.38 : 1;
     const TRAIL_QUALITY = IS_MOBILE_DISPLAY ? 0.24 : 1;
@@ -784,6 +785,7 @@
     const ENEMY_VISUAL_MIN_SIZE = 84;
 
     for (const key in SOUND_PATHS) {
+      if (DISABLE_IOS_SFX) continue;
       const audio = new Audio(SOUND_PATHS[key]);
       audio.preload = IOS_LIGHT_AUDIO ? "metadata" : "auto";
       audio.volume = key === "playerDamage" ? 0.82 : 0.72;
@@ -936,7 +938,7 @@
     }
 
     function playSound(type) {
-      if (!soundEnabled || FORCE_NO_SFX) return;
+      if (!soundEnabled || FORCE_NO_SFX || DISABLE_IOS_SFX) return;
       if (IOS_LIGHT_SFX && type === "enemyHit") return;
 
       const fileSound = SOUNDS[type];
