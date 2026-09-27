@@ -224,6 +224,12 @@
       assets/mushroom_sheet.png
       assets/golem_sheet00.png
       assets/golem_sheet01.png
+      assets/boss00_sheet.png
+      assets/boss01_sheet.png
+      assets/boss02_sheet.png
+      assets/boss03_sheet.png
+      assets/boss04_sheet.png
+      assets/boss05_sheet.png
       assets/boss_forest_sheet00.png
       assets/boss_forest_sheet01.png
 
@@ -250,7 +256,7 @@
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     const IOS_LIGHT_AUDIO = IS_IOS && !URL_OPTIONS.has("fullaudio");
     const IOS_LIGHT_SFX = IS_IOS && !URL_OPTIONS.has("fullsfx");
-    const DISABLE_IOS_BGM = IOS_LIGHT_AUDIO && !URL_OPTIONS.has("mobilebgm");
+    const DISABLE_IOS_BGM = IOS_LIGHT_AUDIO && URL_OPTIONS.has("iosnobgm");
     const DISABLE_IOS_SFX = IOS_LIGHT_AUDIO && !URL_OPTIONS.has("mobilesfx");
     const RENDER_SCALE = IS_MOBILE_DISPLAY ? 0.72 : 1;
     const EFFECT_QUALITY = IS_MOBILE_DISPLAY ? 0.38 : 1;
@@ -308,6 +314,12 @@
       mushroomSheet: "assets/mushroom_sheet.png",
       golemSheet: "assets/golem_sheet00.png",
       golemShooterSheet: "assets/golem_sheet01.png",
+      boss00Sheet: "assets/boss00_sheet.png",
+      boss01Sheet: "assets/boss01_sheet.png",
+      boss02Sheet: "assets/boss02_sheet.png",
+      boss03Sheet: "assets/boss03_sheet.png",
+      boss04Sheet: "assets/boss04_sheet.png",
+      boss05Sheet: "assets/boss05_sheet.png",
       bossForestSheet: "assets/boss_forest_sheet00.png",
       bossForestSheetLate: "assets/boss_forest_sheet01.png",
     };
@@ -324,6 +336,12 @@
       mushroomSheet: { cols: 4, rows: 1, frames: 4, fps: 6 },
       golemSheet: { cols: 4, rows: 1, frames: 4, fps: 6 },
       golemShooterSheet: { cols: 4, rows: 1, frames: 4, fps: 6 },
+      boss00Sheet: { cols: 4, rows: 1, frames: 4, fps: 6 },
+      boss01Sheet: { cols: 4, rows: 1, frames: 4, fps: 6 },
+      boss02Sheet: { cols: 4, rows: 1, frames: 4, fps: 6 },
+      boss03Sheet: { cols: 4, rows: 1, frames: 4, fps: 6 },
+      boss04Sheet: { cols: 4, rows: 1, frames: 4, fps: 6 },
+      boss05Sheet: { cols: 4, rows: 1, frames: 4, fps: 6 },
       bossForestSheet: { cols: 4, rows: 1, frames: 4, fps: 6 },
       bossForestSheetLate: { cols: 4, rows: 1, frames: 4, fps: 6 },
     };
@@ -389,6 +407,7 @@
         },
         bossHp: 78,
         bossName: "川辺のガーディアン",
+        bossSheet: "boss03Sheet",
         clearMode: "next",
         nextStage: "ruins3",
       },
@@ -416,6 +435,7 @@
         },
         bossHp: 138,
         bossName: "洞窟のガーディアン",
+        bossSheet: "boss00Sheet",
         clearMode: "next",
         nextStage: "ruins3",
         nextCarry: { bonusHealChance: 0.22 },
@@ -445,6 +465,7 @@
         },
         bossHp: 118,
         bossName: "遺跡の番人",
+        bossSheet: "boss02Sheet",
         clearMode: "branch",
         routeOptions: [
           { id: "mountain4", label: "A", title: "山岳", titleEn: "Mountain", line1: "40秒・普通", line1En: "40s / Normal", line2: "下なし / 安定", line2En: "No bottom / Stable", selectedText: "A：山岳ルート", selectedTextEn: "A: Mountain route" },
@@ -480,6 +501,7 @@
         },
         bossHp: 122,
         bossName: "山岳の守護者",
+        bossSheet: "boss01Sheet",
         clearMode: "next",
         nextStage: "worldTree5",
       },
@@ -512,6 +534,7 @@
         },
         bossHp: 145,
         bossName: "霧森の怪影",
+        bossSheet: "boss04Sheet",
         clearMode: "next",
         nextStage: "worldTree5",
       },
@@ -552,6 +575,7 @@
         },
         bossHp: 142,
         bossName: "世界樹の影",
+        bossSheet: "boss05Sheet",
         clearMode: "next",
         nextStage: "castleFinal",
       },
@@ -710,7 +734,7 @@
 
     function isTouchMoveActive() {
       return (input.touchMoveActive && input.touchTargetX !== null) ||
-        (input.mouseMoveActive && input.mouseTargetX !== null);
+        (!input.gamepadName && input.mouseMoveActive && input.mouseTargetX !== null);
     }
 
     function isAttackPressed() {
@@ -738,6 +762,7 @@
       playerDamage: "assets/Charadamage00.mp3",
       warning: "assets/Warning00.mp3",
     };
+    const IOS_ESSENTIAL_SFX = new Set(["bossDefeat"]);
     const LOOP_SOUND_PATHS = {
       attack: "assets/attack00.mp3",
       bgm: IOS_LIGHT_AUDIO ? "assets/AIMusic07_mobile.m4a" : "assets/AIMusic07.mp3",
@@ -785,7 +810,7 @@
     const ENEMY_VISUAL_MIN_SIZE = 84;
 
     for (const key in SOUND_PATHS) {
-      if (DISABLE_IOS_SFX) continue;
+      if (DISABLE_IOS_SFX && !IOS_ESSENTIAL_SFX.has(key)) continue;
       const audio = new Audio(SOUND_PATHS[key]);
       audio.preload = IOS_LIGHT_AUDIO ? "metadata" : "auto";
       audio.volume = key === "playerDamage" ? 0.82 : 0.72;
@@ -858,6 +883,7 @@
       if (!soundEnabled) return;
       const audio = LOOP_SOUNDS[key];
       if (!audio) return;
+      const wasPaused = audio.paused;
       if (audio.paused) {
         if (pendingLoopStart[key] === "restart") {
           try {
@@ -868,9 +894,9 @@
         if (fadeIn) audio.volume = 0;
         audio.play().catch(() => {});
       }
-      if (fadeIn) {
+      if (fadeIn && wasPaused) {
         setLoopFade(key, LOOP_BASE_VOLUME[key] || 0.25, 1.1, false);
-      } else {
+      } else if (!fadeIn) {
         audio.volume = LOOP_BASE_VOLUME[key] || audio.volume;
       }
     }
@@ -889,6 +915,12 @@
       for (const key in LOOP_SOUNDS) {
         stopLoopSound(key, true, fadeOut && key !== "attack");
       }
+    }
+
+    function pauseBgmForStageTransition() {
+      stopLoopSound("attack", true, false);
+      stopLoopSound("bgm", false, false);
+      stopLoopSound("finalBgm", false, false);
     }
 
     function stopAllShortSounds() {
@@ -917,9 +949,10 @@
     function syncLoopSounds(game, dt) {
       if (!soundEnabled || FORCE_NO_BGM || DISABLE_IOS_BGM || game.state !== "playing") {
         const fadeOut = !IOS_LIGHT_AUDIO;
+        const keepBgmPosition = soundEnabled && (game.state === "branch" || game.state === "complete");
         stopLoopSound("attack", true, fadeOut);
-        stopLoopSound("bgm", true, fadeOut);
-        stopLoopSound("finalBgm", true, fadeOut);
+        stopLoopSound("bgm", !keepBgmPosition, fadeOut);
+        stopLoopSound("finalBgm", !keepBgmPosition, fadeOut);
         updateLoopFades(dt);
         return;
       }
@@ -929,7 +962,7 @@
 
       stopLoopSound(otherBgmKey, true, true);
       playLoopSound(bgmKey, true);
-      if (IOS_LIGHT_AUDIO) {
+      if (FORCE_NO_SFX) {
         stopLoopSound("attack", true, true);
       } else {
         playLoopSound("attack");
@@ -938,7 +971,8 @@
     }
 
     function playSound(type) {
-      if (!soundEnabled || FORCE_NO_SFX || DISABLE_IOS_SFX) return;
+      if (!soundEnabled || FORCE_NO_SFX) return;
+      if (DISABLE_IOS_SFX && !IOS_ESSENTIAL_SFX.has(type)) return;
       if (IOS_LIGHT_SFX && type === "enemyHit") return;
 
       const fileSound = SOUNDS[type];
@@ -1274,10 +1308,6 @@
       }
 
       startStage(stageId, carryCurrentPlayer = false, stageCarry = null) {
-        if (stageId === "mountain4" || stageId === "fog4") {
-          cueLoopSoundRestart("bgm");
-        }
-
         const carryPlayer = carryCurrentPlayer
           ? {
               hp: clamp(this.player.hp, 1, this.player.maxHp),
@@ -1325,7 +1355,6 @@
 
       startNextLoop() {
         const nextLoop = this.loopCount + 1;
-        cueLoopSoundRestart("bgm");
         this.reset(
           "forest1",
           {
@@ -1516,7 +1545,7 @@
       clearStage() {
         this.bestScore = Math.max(this.bestScore, this.score);
         localStorage.setItem("branchQuestBest", String(this.bestScore));
-        stopAllLoopSounds(false);
+        pauseBgmForStageTransition();
         quietShortSounds(260);
         this.addFlash("rgba(255,255,180,", 0.35);
         this.addShake(10);
@@ -2254,6 +2283,43 @@
             type: i % 3 === 0 ? "diamond" : "spark",
             gravity: rand(20, 110),
             rotSpeed: rand(-9, 9),
+          });
+        }
+
+        this.addBossEntranceBurst(drama);
+      }
+
+      addBossEntranceBurst(drama) {
+        const x = W / 2;
+        const y = 300;
+        const castle = this.stageId === "castleFinal";
+        const coreColor = castle ? "rgba(255,70,100,0.92)" : "rgba(255,235,120,0.9)";
+        const edgeColor = castle ? "rgba(180,40,255,0.66)" : "rgba(120,230,255,0.58)";
+
+        this.addShockwave(x, y, 320 + drama.power * 120, 0.9, coreColor, 8 + drama.power * 4);
+        this.addShockwave(x, y, 470 + drama.power * 150, 1.12, edgeColor, 5 + drama.power * 3);
+
+        const slashCount = effectCount(10 + Math.round(drama.power * 8));
+        for (let i = 0; i < slashCount; i++) {
+          const angle = i * Math.PI * 2 / slashCount + rand(-0.08, 0.08);
+          this.addSlash(x, y, angle, 150 + drama.power * 95 + i * 4, 0.35 + drama.power * 0.12, i % 2 ? coreColor : edgeColor);
+        }
+
+        const sparkCount = effectCount(28 + Math.round(drama.power * 30));
+        for (let i = 0; i < sparkCount; i++) {
+          const angle = rand(0, Math.PI * 2);
+          const speed = rand(180, 520 + drama.power * 130);
+          this.addParticle({
+            x: x + rand(-52, 52),
+            y: y + rand(-48, 48),
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: rand(0.35, 0.9),
+            color: i % 3 === 0 ? edgeColor : coreColor,
+            size: rand(4, 12 + drama.power * 4),
+            type: i % 2 === 0 ? "diamond" : "spark",
+            gravity: rand(30, 150),
+            rotSpeed: rand(-12, 12),
           });
         }
       }
@@ -4162,9 +4228,9 @@
       drawBoss() {
         const b = this.boss;
         if (!b || !b.active) return;
-        const sheetKey = this.stageId === "worldTree5" || this.stageId === "castleFinal"
+        const sheetKey = this.stage.bossSheet || (this.stageId === "worldTree5" || this.stageId === "castleFinal"
           ? "bossForestSheetLate"
-          : "bossForestSheet";
+          : "bossForestSheet");
         const visualSize = b.r * 5.6;
 
         if (drawAnimatedAsset(sheetKey, b.x, b.y, visualSize, visualSize, {
