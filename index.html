@@ -620,11 +620,103 @@
     };
 
     const IMAGES = {};
+    const IOS_STAGE_ASSET_KEYS = new Set();
+    let iosActiveStageAssets = new Set();
+
+    function getStageAssetKeys(stageId) {
+      const stage = STAGE_CONFIGS[stageId];
+      const keys = new Set();
+      if (!stage) return keys;
+
+      const add = (key) => {
+        if (key && ASSET_PATHS[key]) keys.add(key);
+      };
+
+      add(stage.bg);
+      add(stage.bgAlt);
+      add(stage.fg);
+      add(stage.fog?.key);
+      add(stage.bgGlobalOverlay?.key);
+      (stage.bgVariants || []).forEach(add);
+      Object.values(stage.bgOverlays || {}).forEach((overlay) => add(overlay?.key));
+
+      const bossSheet = stage.bossSheet || (stageId === "worldTree5" || stageId === "castleFinal"
+        ? "bossForestSheetLate"
+        : "bossForestSheet");
+      add(bossSheet);
+      return keys;
+    }
+
+    for (const stageId in STAGE_CONFIGS) {
+      for (const key of getStageAssetKeys(stageId)) {
+        IOS_STAGE_ASSET_KEYS.add(key);
+      }
+    }
+
+    function loadImageAsset(key) {
+      if (!ASSET_PATHS[key]) return;
+      const img = IMAGES[key] || new Image();
+      IMAGES[key] = img;
+      if (img._loading || (img.complete && img.naturalWidth > 0)) return;
+
+      img.decoding = "async";
+      img._loading = true;
+      img.onload = () => {
+        img._loading = false;
+      };
+      img.onerror = () => {
+        img._loading = false;
+      };
+      img.src = ASSET_PATHS[key];
+    }
+
+    function clearCachedAsset(key) {
+      for (const cacheKey of CANVAS_ASSET_CACHE.keys()) {
+        if (cacheKey.startsWith(key + ":")) {
+          CANVAS_ASSET_CACHE.delete(cacheKey);
+        }
+      }
+    }
+
+    function releaseImageAsset(key) {
+      const img = IMAGES[key];
+      if (!img) return;
+      img.onload = null;
+      img.onerror = null;
+      try {
+        img.removeAttribute("src");
+      } catch (err) {}
+      clearCachedAsset(key);
+      IMAGES[key] = new Image();
+    }
+
+    function prepareStageAssets(stageId) {
+      if (!IS_IOS) return;
+
+      const wanted = getStageAssetKeys(stageId);
+      const stage = STAGE_CONFIGS[stageId];
+      const nextStageIds = stage?.routeOptions?.map((route) => route.id) || (stage?.nextStage ? [stage.nextStage] : []);
+
+      for (const nextStageId of nextStageIds) {
+        for (const key of getStageAssetKeys(nextStageId)) {
+          wanted.add(key);
+        }
+      }
+
+      for (const key of iosActiveStageAssets) {
+        if (!wanted.has(key)) releaseImageAsset(key);
+      }
+      for (const key of wanted) {
+        loadImageAsset(key);
+      }
+      iosActiveStageAssets = wanted;
+    }
 
     for (const key in ASSET_PATHS) {
-      const img = new Image();
-      img.src = ASSET_PATHS[key];
-      IMAGES[key] = img;
+      IMAGES[key] = new Image();
+      if (!IS_IOS || !IOS_STAGE_ASSET_KEYS.has(key)) {
+        loadImageAsset(key);
+      }
     }
 
     function imageReady(key) {
@@ -1094,6 +1186,7 @@
       reset(stageId = "forest1", carryPlayer = null, carryScore = 0) {
         this.stageId = stageId;
         this.stage = STAGE_CONFIGS[stageId] || STAGE_CONFIGS.forest1;
+        prepareStageAssets(this.stage.id);
         this.elapsed = 0;
         this.score = carryScore;
         this.loopCount = carryPlayer?.loopCount || 1;
