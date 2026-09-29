@@ -870,6 +870,10 @@
     };
     const LOOP_FADE = {};
     const pendingLoopStart = {};
+    const LOOP_WANTED = {};
+    const LOOP_PLAY_PENDING = {};
+    let essentialAudioUnlocked = false;
+    let essentialAudioUnlocking = false;
     const SOUND_PRIORITY = {
       enemyHit: 1,
       itemGet: 2,
@@ -904,7 +908,8 @@
     for (const key in SOUND_PATHS) {
       if (DISABLE_IOS_SFX && !IOS_ESSENTIAL_SFX.has(key)) continue;
       const audio = new Audio(SOUND_PATHS[key]);
-      audio.preload = IOS_LIGHT_AUDIO ? "metadata" : "auto";
+      audio.preload = IOS_ESSENTIAL_SFX.has(key) ? "auto" : (IOS_LIGHT_AUDIO ? "metadata" : "auto");
+      audio.playsInline = true;
       audio.volume = key === "playerDamage" ? 0.82 : 0.72;
       SOUNDS[key] = audio;
     }
@@ -912,7 +917,8 @@
     for (const key in LOOP_SOUND_PATHS) {
       if (DISABLE_IOS_BGM && isBgmLoopKey(key)) continue;
       const audio = new Audio(LOOP_SOUND_PATHS[key]);
-      audio.preload = key === "attack" && !IOS_LIGHT_AUDIO ? "auto" : "metadata";
+      audio.preload = key === "attack" ? "auto" : "metadata";
+      audio.playsInline = true;
       audio.loop = true;
       audio.volume = LOOP_BASE_VOLUME[key] || 0.25;
       LOOP_SOUNDS[key] = audio;
@@ -958,6 +964,7 @@
     function stopLoopSound(key, reset = true, fadeOut = false) {
       const audio = LOOP_SOUNDS[key];
       if (!audio) return;
+      LOOP_WANTED[key] = false;
       if (fadeOut && !audio.paused) {
         setLoopFade(key, 0, 0.75, reset);
         return;
@@ -975,8 +982,9 @@
       if (!soundEnabled) return;
       const audio = LOOP_SOUNDS[key];
       if (!audio) return;
+      LOOP_WANTED[key] = true;
       const wasPaused = audio.paused;
-      if (audio.paused) {
+      if (audio.paused && !LOOP_PLAY_PENDING[key]) {
         if (pendingLoopStart[key] === "restart") {
           try {
             audio.currentTime = 0;
@@ -984,7 +992,20 @@
           delete pendingLoopStart[key];
         }
         if (fadeIn) audio.volume = 0;
-        audio.play().catch(() => {});
+        LOOP_PLAY_PENDING[key] = true;
+        const playRequest = audio.play();
+        if (playRequest && typeof playRequest.then === "function") {
+          playRequest
+            .then(() => {
+              LOOP_PLAY_PENDING[key] = false;
+              if (!LOOP_WANTED[key]) audio.pause();
+            })
+            .catch(() => {
+              LOOP_PLAY_PENDING[key] = false;
+            });
+        } else {
+          LOOP_PLAY_PENDING[key] = false;
+        }
       }
       if (fadeIn && wasPaused) {
         setLoopFade(key, LOOP_BASE_VOLUME[key] || 0.25, 1.1, false);
@@ -1015,6 +1036,43 @@
       stopLoopSound("finalBgm", false, false);
     }
 
+    function unlockEssentialAudio() {
+      if (!soundEnabled || essentialAudioUnlocked || essentialAudioUnlocking) return;
+      const audio = SOUNDS.bossDefeat;
+      if (!audio) return;
+
+      essentialAudioUnlocking = true;
+      const oldMuted = audio.muted;
+      audio.muted = true;
+      try {
+        audio.currentTime = 0;
+      } catch (err) {}
+
+      const playRequest = audio.play();
+      if (!playRequest || typeof playRequest.then !== "function") {
+        audio.pause();
+        audio.muted = oldMuted;
+        essentialAudioUnlocked = true;
+        essentialAudioUnlocking = false;
+        return;
+      }
+
+      playRequest
+        .then(() => {
+          audio.pause();
+          try {
+            audio.currentTime = 0;
+          } catch (err) {}
+          audio.muted = oldMuted;
+          essentialAudioUnlocked = true;
+          essentialAudioUnlocking = false;
+        })
+        .catch(() => {
+          audio.muted = oldMuted;
+          essentialAudioUnlocking = false;
+        });
+    }
+
     function stopAllShortSounds() {
       for (const key in SOUNDS) {
         const audio = SOUNDS[key];
@@ -1029,7 +1087,7 @@
     }
 
     function stopGameAudio(fadeOut = false) {
-      stopAllLoopSounds(fadeOut && !IOS_LIGHT_AUDIO);
+      stopAllLoopSounds(fadeOut);
       stopAllShortSounds();
     }
 
@@ -1040,9 +1098,9 @@
 
     function syncLoopSounds(game, dt) {
       if (!soundEnabled || FORCE_NO_BGM || DISABLE_IOS_BGM || game.state !== "playing") {
-        const fadeOut = !IOS_LIGHT_AUDIO;
         const keepBgmPosition = soundEnabled && (game.state === "branch" || game.state === "complete");
-        stopLoopSound("attack", true, fadeOut);
+        const fadeOut = soundEnabled && !keepBgmPosition;
+        stopLoopSound("attack", true, false);
         stopLoopSound("bgm", !keepBgmPosition, fadeOut);
         stopLoopSound("finalBgm", !keepBgmPosition, fadeOut);
         updateLoopFades(dt);
@@ -1246,6 +1304,7 @@
         this.pauseSelection = 0;
         this.gameOverSelection = 0;
         this.clearRecorded = false;
+        this.clearAnimStart = 0;
 
         this.shake = 0;
         this.flashAlpha = 0;
@@ -1340,7 +1399,11 @@
         } else if (item.id === "sound") {
           soundEnabled = !soundEnabled;
           localStorage.setItem("branchQuestSound", soundEnabled ? "on" : "off");
-          if (!soundEnabled) stopGameAudio(false);
+          if (!soundEnabled) {
+            stopGameAudio(false);
+          } else {
+            unlockEssentialAudio();
+          }
         }
       }
 
@@ -1642,6 +1705,7 @@
         quietShortSounds(260);
         this.addFlash("rgba(255,255,180,", 0.35);
         this.addShake(10);
+        this.clearAnimStart = performance.now();
         this.addStageClearBurst();
         this.state = this.stage.clearMode === "branch" ? "branch" : "complete";
         playSound(!this.stage.nextStage ? "clear" : "power");
@@ -1681,6 +1745,99 @@
             rotSpeed: rand(-10, 10),
           });
         }
+      }
+
+      getStageClearTheme() {
+        const themes = {
+          forest1: { rgb: "145,255,105", accent: "255,245,155", kind: "leaf" },
+          river2: { rgb: "105,235,210", accent: "205,255,150", kind: "leaf" },
+          cave2: { rgb: "105,205,255", accent: "220,245,255", kind: "magic" },
+          ruins3: { rgb: "220,175,255", accent: "255,225,120", kind: "magic" },
+          mountain4: { rgb: "190,235,255", accent: "255,255,255", kind: "shard" },
+          fog4: { rgb: "125,255,220", accent: "220,255,245", kind: "magic" },
+          worldTree5: { rgb: "110,255,155", accent: "235,255,175", kind: "magic" },
+          castleFinal: { rgb: "255,75,105", accent: "255,220,130", kind: "shard" },
+        };
+        return themes[this.stageId] || themes.forest1;
+      }
+
+      drawStageClearCelebration() {
+        const theme = this.getStageClearTheme();
+        const elapsed = Math.max(0, (performance.now() - (this.clearAnimStart || performance.now())) / 1000);
+        const intro = clamp(elapsed / 0.45, 0, 1);
+        const pulse = 0.5 + Math.sin(elapsed * 3.2) * 0.5;
+        const moteCount = IS_MOBILE_DISPLAY ? 12 : 20;
+        const stageSeed = Object.keys(STAGE_CONFIGS).indexOf(this.stageId) + 1;
+
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+
+        const sweepY = H + 180 - ((elapsed * 250) % (H + 360));
+        const sweep = ctx.createLinearGradient(0, sweepY - 170, 0, sweepY + 170);
+        sweep.addColorStop(0, `rgba(${theme.rgb},0)`);
+        sweep.addColorStop(0.5, `rgba(${theme.rgb},${0.08 * intro})`);
+        sweep.addColorStop(1, `rgba(${theme.rgb},0)`);
+        ctx.fillStyle = sweep;
+        ctx.fillRect(0, sweepY - 170, W, 340);
+
+        ctx.strokeStyle = `rgba(${theme.rgb},${0.32 + pulse * 0.18})`;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(12, 12, W - 24, H - 24);
+        ctx.strokeStyle = `rgba(${theme.accent},${0.12 + pulse * 0.1})`;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(22, 22, W - 44, H - 44);
+
+        ctx.translate(W / 2, H * 0.3);
+        for (let i = 0; i < 8; i++) {
+          const a = i * Math.PI / 4 + elapsed * 0.08;
+          const inner = 90 + pulse * 10;
+          const outer = 220 + pulse * 24;
+          ctx.strokeStyle = `rgba(${i % 2 ? theme.rgb : theme.accent},${0.05 + intro * 0.07})`;
+          ctx.lineWidth = i % 2 ? 3 : 2;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * inner, Math.sin(a) * inner);
+          ctx.lineTo(Math.cos(a) * outer, Math.sin(a) * outer);
+          ctx.stroke();
+        }
+        ctx.translate(-W / 2, -H * 0.3);
+
+        for (let i = 0; i < moteCount; i++) {
+          const phase = (elapsed * (0.12 + (i % 3) * 0.018) + i / moteCount) % 1;
+          const xBase = 44 + ((i * 97 + stageSeed * 53) % (W - 88));
+          const x = xBase + Math.sin(elapsed * 1.4 + i * 1.7) * 20;
+          const y = H + 45 - phase * (H + 130);
+          const alpha = Math.sin(phase * Math.PI) * (0.28 + intro * 0.32);
+          const size = 4 + (i % 4) * 1.5;
+
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(elapsed * (0.7 + (i % 3) * 0.22) + i);
+          ctx.fillStyle = `rgba(${i % 3 === 0 ? theme.accent : theme.rgb},${alpha})`;
+
+          if (theme.kind === "leaf") {
+            ctx.beginPath();
+            ctx.ellipse(0, 0, size * 1.7, size * 0.7, 0, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (theme.kind === "shard") {
+            ctx.beginPath();
+            ctx.moveTo(0, -size * 1.8);
+            ctx.lineTo(size * 0.7, size);
+            ctx.lineTo(-size * 0.65, size * 0.45);
+            ctx.closePath();
+            ctx.fill();
+          } else {
+            ctx.beginPath();
+            ctx.moveTo(0, -size * 1.5);
+            ctx.lineTo(size, 0);
+            ctx.lineTo(0, size * 1.5);
+            ctx.lineTo(-size, 0);
+            ctx.closePath();
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        ctx.restore();
       }
 
       getClearResult(status = "clear") {
@@ -5100,6 +5257,7 @@
 
         ctx.fillStyle = "rgba(0,0,0,0.72)";
         ctx.fillRect(0, 0, W, H);
+        this.drawStageClearCelebration();
 
         ctx.fillStyle = "#f3ffe7";
         ctx.font = "900 50px sans-serif";
@@ -5132,6 +5290,7 @@
 
         ctx.fillStyle = "rgba(0,0,0,0.70)";
         ctx.fillRect(0, 0, W, H);
+        this.drawStageClearCelebration();
 
         ctx.fillStyle = "#f3ffe7";
         ctx.font = "900 48px sans-serif";
@@ -5575,6 +5734,7 @@
 
     canvas.addEventListener("pointerdown", (e) => {
       e.preventDefault();
+      unlockEssentialAudio();
       const pos = getCanvasPos(e);
 
       if (game.state === "title") {
@@ -5698,6 +5858,7 @@
     });
 
     window.addEventListener("keydown", (e) => {
+      unlockEssentialAudio();
       if (e.code === "ArrowLeft" || e.code === "KeyA") {
         input.keyLeft = true;
       }
