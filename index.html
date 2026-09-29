@@ -949,6 +949,7 @@
 
           if (audio.volume <= 0.001) {
             audio.pause();
+            audio.muted = true;
             if (fade.resetOnStop) {
               try {
                 audio.currentTime = 0;
@@ -970,6 +971,8 @@
         return;
       }
       audio.pause();
+      audio.muted = true;
+      audio.volume = 0;
       delete LOOP_FADE[key];
       if (reset) {
         try {
@@ -983,6 +986,8 @@
       const audio = LOOP_SOUNDS[key];
       if (!audio) return;
       LOOP_WANTED[key] = true;
+      audio.muted = false;
+      if (LOOP_FADE[key]?.target === 0) delete LOOP_FADE[key];
       const wasPaused = audio.paused;
       if (audio.paused && !LOOP_PLAY_PENDING[key]) {
         if (pendingLoopStart[key] === "restart") {
@@ -1037,13 +1042,16 @@
     }
 
     function unlockEssentialAudio() {
-      if (!soundEnabled || essentialAudioUnlocked || essentialAudioUnlocking) return;
+      if (!soundEnabled) return;
+      unlockAudioContext();
+      if (essentialAudioUnlocked || essentialAudioUnlocking) return;
       const audio = SOUNDS.bossDefeat;
       if (!audio) return;
 
       essentialAudioUnlocking = true;
-      const oldMuted = audio.muted;
-      audio.muted = true;
+      const oldVolume = audio.volume;
+      audio.muted = false;
+      audio.volume = 0.001;
       try {
         audio.currentTime = 0;
       } catch (err) {}
@@ -1051,7 +1059,7 @@
       const playRequest = audio.play();
       if (!playRequest || typeof playRequest.then !== "function") {
         audio.pause();
-        audio.muted = oldMuted;
+        audio.volume = oldVolume;
         essentialAudioUnlocked = true;
         essentialAudioUnlocking = false;
         return;
@@ -1063,14 +1071,87 @@
           try {
             audio.currentTime = 0;
           } catch (err) {}
-          audio.muted = oldMuted;
+          audio.volume = oldVolume;
           essentialAudioUnlocked = true;
           essentialAudioUnlocking = false;
         })
         .catch(() => {
-          audio.muted = oldMuted;
+          audio.volume = oldVolume;
           essentialAudioUnlocking = false;
         });
+    }
+
+    function unlockAudioContext() {
+      if (!soundEnabled || !window.AudioContext && !window.webkitAudioContext) return;
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume().catch(() => {});
+        }
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0.0001;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.01);
+      } catch (err) {}
+    }
+
+    function playBossExplosionFallback() {
+      if (!IS_IOS || !audioCtx) return;
+      if (audioCtx.state !== "running") {
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume()
+            .then(() => {
+              if (audioCtx.state === "running") playBossExplosionFallback();
+            })
+            .catch(() => {});
+        }
+        return;
+      }
+      try {
+        const now = audioCtx.currentTime;
+        const duration = 0.48;
+        const frameCount = Math.floor(audioCtx.sampleRate * duration);
+        const buffer = audioCtx.createBuffer(1, frameCount, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < frameCount; i++) {
+          const fade = 1 - i / frameCount;
+          data[i] = (Math.random() * 2 - 1) * fade * fade;
+        }
+
+        const noise = audioCtx.createBufferSource();
+        const filter = audioCtx.createBiquadFilter();
+        const noiseGain = audioCtx.createGain();
+        noise.buffer = buffer;
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(1050, now);
+        filter.frequency.exponentialRampToValueAtTime(140, now + duration);
+        noiseGain.gain.setValueAtTime(0.0001, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.15, now + 0.012);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(audioCtx.destination);
+
+        const boom = audioCtx.createOscillator();
+        const boomGain = audioCtx.createGain();
+        boom.type = "sine";
+        boom.frequency.setValueAtTime(115, now);
+        boom.frequency.exponentialRampToValueAtTime(42, now + 0.36);
+        boomGain.gain.setValueAtTime(0.0001, now);
+        boomGain.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+        boomGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+        boom.connect(boomGain);
+        boomGain.connect(audioCtx.destination);
+
+        noise.start(now);
+        noise.stop(now + duration);
+        boom.start(now);
+        boom.stop(now + 0.44);
+      } catch (err) {}
     }
 
     function stopAllShortSounds() {
@@ -1124,6 +1205,7 @@
       if (!soundEnabled || FORCE_NO_SFX) return;
       if (DISABLE_IOS_SFX && !IOS_ESSENTIAL_SFX.has(type)) return;
       if (IOS_LIGHT_SFX && type === "enemyHit") return;
+      if (type === "bossDefeat") playBossExplosionFallback();
 
       const fileSound = SOUNDS[type];
       if (fileSound) {
