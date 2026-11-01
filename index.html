@@ -1115,6 +1115,50 @@
       } catch (err) {}
     }
 
+    let clearChimeRequest = 0;
+    const clearChimeVoices = new Set();
+
+    function stopClearChime() {
+      clearChimeRequest++;
+      for (const voice of clearChimeVoices) {
+        try { voice.stop(); } catch (err) {}
+      }
+    }
+
+    async function playClearChime() {
+      if (!soundEnabled || FORCE_NO_AUDIO || FORCE_NO_SFX) return;
+      stopClearChime();
+      const request = clearChimeRequest;
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state !== "running") await audioCtx.resume();
+        if (request !== clearChimeRequest || !soundEnabled || audioCtx.state !== "running") return;
+
+        const now = audioCtx.currentTime;
+        // A short rising bell phrase, with a soft attack to avoid clicks.
+        [1046.5, 1318.5, 1568, 2093].forEach((frequency, i) => {
+          const start = now + i * 0.075;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.value = frequency;
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.exponentialRampToValueAtTime(0.075, start + 0.008);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.62);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          clearChimeVoices.add(osc);
+          osc.onended = () => {
+            osc.disconnect();
+            gain.disconnect();
+            clearChimeVoices.delete(osc);
+          };
+          osc.start(start);
+          osc.stop(start + 0.64);
+        });
+      } catch (err) {}
+    }
+
     function playBossExplosionFallback() {
       if (!IS_IOS || !audioCtx) return;
       if (audioCtx.state !== "running") {
@@ -1171,6 +1215,7 @@
     }
 
     function stopAllShortSounds() {
+      stopClearChime();
       for (const key in SOUNDS) {
         const audio = SOUNDS[key];
         if (!audio) continue;
@@ -1806,7 +1851,7 @@
         this.clearAnimStart = performance.now();
         this.addStageClearBurst();
         this.state = this.stage.clearMode === "branch" ? "branch" : "complete";
-        playSound(!this.stage.nextStage ? "clear" : "power");
+        playClearChime();
         if (!this.clearRecorded && !this.stage.nextStage) {
           this.lastClearResult = this.getClearResult();
           this.saveRanking(this.lastClearResult);
