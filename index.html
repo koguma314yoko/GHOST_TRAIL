@@ -2563,20 +2563,13 @@
       spawnPowerup() {
         let type = "weapon";
         const canHeal = this.player.hp < this.player.maxHp;
-        const weaponBlocked = this.player.overdriveTime > 0 || this.player.weaponDropBlockTime > 0;
 
         const healChance = Math.min(0.95, this.stage.healChance + (this.stageBonusHealChance || 0));
 
         if (canHeal && Math.random() < healChance) {
           type = "heal";
-        } else if (Math.random() < this.stage.overdriveChance) {
-          type = "overdrive";
-        } else if (weaponBlocked) {
-          if (canHeal) {
-            type = "heal";
-          } else {
-            return;
-          }
+        } else if (this.player.weaponLevel >= 5 && Math.random() >= 0.1) {
+          return;
         }
 
         this.powerups.push({
@@ -5227,8 +5220,8 @@
               "左右に動いて敵弾を避けます。",
               "攻撃は自動です。敵を倒してスコアを伸ばしましょう。",
               "武器Lvアイテムで弾が強化されます。",
-              "光る5秒無敵アイテムは武器Lvも1段階上がります。",
-              "武器LvがMAXの時はMAXのままです。",
+              "武器は最大Lv5まで強化できます。",
+              "MAX時の武器アイテムは少なめで、得点になります。",
               "分岐ルートで難易度と得点が変わります。",
               "全ステージクリア後はスコアを引き継いで2周目へ。",
             ]
@@ -5236,8 +5229,8 @@
               "Move left and right to dodge enemy shots.",
               "Your weapon fires automatically.",
               "Weapon items raise your weapon level.",
-              "The glowing overdrive item grants 5 seconds of invincibility",
-              "and raises weapon level by one, keeping MAX if already MAX.",
+              "Upgrade your weapon up to level 5.",
+              "At MAX, weapon items are rare and give bonus points.",
               "Route choices change difficulty and score.",
               "After clearing all stages, loop 2 starts with your score kept.",
             ];
